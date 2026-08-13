@@ -1,0 +1,37 @@
+@import 'tailwindcss';
+@import 'primeicons/primeicons.css';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../../node_modules/primevue/**/*.{vue,js,ts}';
+
+@theme inline {
+    --font-sans:
+        'Segoe UI', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-brand-50: #eef6f4;
+    --color-brand-100: #d5ebe5;
+    --color-brand-500: #1f6f5b;
+    --color-brand-600: #185a4a;
+    --color-brand-700: #134739;
+    --color-surface-50: #f7f8f8;
+    --color-surface-100: #eef1f1;
+    --color-ink: #1c2422;
+}
+
+html,
+body,
+#app {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    color: var(--color-ink);
+    background: #f3f5f4;
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+    vertical-align: middle;
+}
