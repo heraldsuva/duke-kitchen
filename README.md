@@ -24,6 +24,9 @@ Users manage **Sites**, **Equipment**, and **Equipment ↔ Site registrations**,
 ## Installation
 
 ```bash
+git clone git@github.com:heraldsuva/duke-kitchen.git
+cd duke-kitchen
+
 composer install
 npm install
 cp .env.example .env
@@ -31,6 +34,8 @@ php artisan key:generate
 ```
 
 ### Start MySQL (Docker recommended)
+
+Requires Docker Desktop (or equivalent) running locally.
 
 ```bash
 docker compose up -d
