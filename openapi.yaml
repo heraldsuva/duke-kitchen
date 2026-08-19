@@ -1,0 +1,814 @@
+openapi: 3.0.3
+info:
+  title: Duke Kitchen Equipment Management API
+  version: 1.0.0
+  description: >
+    REST API documented for the duke-kitchen Laravel app.
+    All endpoints are JSON. Protected endpoints require a Sanctum Bearer token.
+servers:
+  - url: http://localhost:8000
+tags:
+  - name: Auth
+  - name: Users
+  - name: Sites
+  - name: Equipment
+paths:
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login (username or email)
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /api/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Signup (creates Admin user)
+      operationId: authSignup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+  /api/auth/user:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user
+      operationId: authUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout (revoke current token)
+      operationId: authLogout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/users:
+    get:
+      tags: [Users]
+      summary: List users (SuperAdmin only)
+      operationId: listUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Users list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Users]
+      summary: Create user (SuperAdmin only)
+      operationId: createUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelopeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /api/users/{id}:
+    put:
+      tags: [Users]
+      summary: Update user (SuperAdmin only)
+      operationId: updateUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelopeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+    patch:
+      tags: [Users]
+      summary: Update user (SuperAdmin only)
+      operationId: patchUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelopeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+    delete:
+      tags: [Users]
+      summary: Delete user (SuperAdmin only)
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/sites:
+    get:
+      tags: [Sites]
+      summary: List sites (owned by the authenticated user)
+      operationId: listSites
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sites list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Sites]
+      summary: Create site (SuperAdmin may assign user_id)
+      operationId: createSite
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreSiteRequest'
+      responses:
+        '201':
+          description: Site created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteEnvelopeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /api/sites/{id}:
+    put:
+      tags: [Sites]
+      summary: Update site
+      operationId: updateSite
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSiteRequest'
+      responses:
+        '200':
+          description: Site updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteEnvelopeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+    patch:
+      tags: [Sites]
+      summary: Update site
+      operationId: patchSite
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSiteRequest'
+      responses:
+        '200':
+          description: Site updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteEnvelopeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+    delete:
+      tags: [Sites]
+      summary: Delete site (unregisters equipment registrations, does not delete equipment)
+      operationId: deleteSite
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Site deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/equipment:
+    get:
+      tags: [Equipment]
+      summary: List equipment (owned by the authenticated user)
+      operationId: listEquipment
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Equipment list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Equipment]
+      summary: Create equipment (optional site registration)
+      operationId: createEquipment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreEquipmentRequest'
+      responses:
+        '201':
+          description: Equipment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentEnvelopeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /api/equipment/{id}:
+    put:
+      tags: [Equipment]
+      summary: Update equipment
+      operationId: updateEquipment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEquipmentRequest'
+      responses:
+        '200':
+          description: Equipment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentEnvelopeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+    patch:
+      tags: [Equipment]
+      summary: Update equipment
+      operationId: patchEquipment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEquipmentRequest'
+      responses:
+        '200':
+          description: Equipment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentEnvelopeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+    delete:
+      tags: [Equipment]
+      summary: Delete equipment (removes its registration, if any)
+      operationId: deleteEquipment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Equipment deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: token
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Policy denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: Validation errors
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: The given data was invalid.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    LoginRequest:
+      type: object
+      required: [login, password]
+      properties:
+        login:
+          type: string
+          description: Username or email
+        password:
+          type: string
+
+    SignupRequest:
+      type: object
+      required: [first_name, last_name, email_address, user_name, password, password_confirmation]
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email_address:
+          type: string
+          format: email
+        user_name:
+          type: string
+        password:
+          type: string
+        password_confirmation:
+          type: string
+
+    UserType:
+      type: string
+      enum: [SuperAdmin, Admin]
+      example: Admin
+
+    EquipmentCondition:
+      type: string
+      enum: [Working, "Not Working"]
+      example: Working
+
+    StoreUserRequest:
+      type: object
+      required: [first_name, last_name, email_address, user_name, password, password_confirmation, user_type]
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email_address:
+          type: string
+          format: email
+        user_name:
+          type: string
+        password:
+          type: string
+        password_confirmation:
+          type: string
+        user_type:
+          $ref: '#/components/schemas/UserType'
+
+    UpdateUserRequest:
+      type: object
+      required: [first_name, last_name, email_address, user_name, password, user_type]
+      description: >
+        password is allowed to be null/empty; Laravel validation uses nullable + confirmed.
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email_address:
+          type: string
+          format: email
+        user_name:
+          type: string
+        password:
+          type: string
+          nullable: true
+        user_type:
+          $ref: '#/components/schemas/UserType'
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        first_name:
+          type: string
+        last_name:
+          type: string
+        full_name:
+          type: string
+        user_name:
+          type: string
+        email_address:
+          type: string
+        user_type:
+          $ref: '#/components/schemas/UserType'
+        is_super_admin:
+          type: boolean
+        sites_count:
+          type: integer
+          example: 0
+        equipment_count:
+          type: integer
+          example: 0
+      required: [id, first_name, last_name, full_name, user_name, email_address, user_type]
+
+    TokenResponse:
+      type: object
+      required: [token, token_type, user]
+      properties:
+        token:
+          type: string
+          description: Sanctum personal access token (plain text)
+        token_type:
+          type: string
+          example: Bearer
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    CurrentUserResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    UserListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserResponse'
+
+    UserEnvelopeResponse:
+      type: object
+      required: [message, data]
+      properties:
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/UserResponse'
+
+    StoreSiteRequest:
+      type: object
+      required: [description, active]
+      properties:
+        description:
+          type: string
+        active:
+          type: boolean
+        user_id:
+          type: integer
+          description: >
+            Required only when the authenticated user is SuperAdmin.
+            Admins cannot create sites for other users.
+
+    UpdateSiteRequest:
+      type: object
+      required: [description, active]
+      properties:
+        description:
+          type: string
+        active:
+          type: boolean
+
+    SiteOwner:
+      type: object
+      required: [id, name, user_name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        user_name:
+          type: string
+
+    SiteResponse:
+      type: object
+      required: [id, description, active, equipment_count, owner]
+      properties:
+        id:
+          type: integer
+        description:
+          type: string
+        active:
+          type: boolean
+        equipment_count:
+          type: integer
+        owner:
+          $ref: '#/components/schemas/SiteOwner'
+
+    SiteListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteResponse'
+
+    SiteEnvelopeResponse:
+      type: object
+      required: [message, data]
+      properties:
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/SiteResponse'
+
+    StoreEquipmentRequest:
+      type: object
+      required: [serial_number, description, condition]
+      properties:
+        serial_number:
+          type: string
+        description:
+          type: string
+        condition:
+          $ref: '#/components/schemas/EquipmentCondition'
+        site_id:
+          type: integer
+          nullable: true
+          description: >
+            Null means the equipment is created without a site registration.
+
+    UpdateEquipmentRequest:
+      type: object
+      required: [serial_number, description, condition]
+      properties:
+        serial_number:
+          type: string
+        description:
+          type: string
+        condition:
+          $ref: '#/components/schemas/EquipmentCondition'
+        site_id:
+          type: integer
+          nullable: true
+
+    EquipmentResponse:
+      type: object
+      required: [id, serial_number, description, condition, owner, user_id]
+      properties:
+        id:
+          type: integer
+        serial_number:
+          type: string
+        description:
+          type: string
+        condition:
+          type: string
+          enum: [Working, "Not Working"]
+        site_id:
+          type: integer
+          nullable: true
+        site:
+          type: string
+          nullable: true
+        owner:
+          type: string
+        user_id:
+          type: integer
+
+    EquipmentListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EquipmentResponse'
+
+    EquipmentEnvelopeResponse:
+      type: object
+      required: [message, data]
+      properties:
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/EquipmentResponse'
+

@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /*
@@ -39,12 +41,19 @@ expect()->extend('toBeOne', function () {
 |--------------------------------------------------------------------------
 |
 | While Pest is very powerful out-of-the-box, you may have some testing code specific to your
-| project that you don't want to repeat in every file. Here you can also expose helpers as
+| project that you don't want to repeat in every file. Here, you can also expose helpers as
 | global functions to help you to reduce the number of lines of code in your test files.
 |
 */
 
-function something()
+function actingAsApiUser(User $user)
 {
-    // ..
+    Sanctum::actingAs($user);
+
+    return test();
+}
+
+function apiTokenFor(User $user, string $name = 'test'): string
+{
+    return $user->createToken($name)->plainTextToken;
 }

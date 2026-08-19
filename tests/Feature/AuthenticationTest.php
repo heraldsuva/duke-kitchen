@@ -11,13 +11,15 @@ test('user can login with email', function () {
         'password' => Hash::make('Password1!'),
     ]);
 
-    $response = $this->post('/login', [
+    $response = $this->postJson('/api/auth/login', [
         'login' => 'anna@example.com',
         'password' => 'Password1!',
     ]);
 
-    $response->assertRedirect(route('dashboard'));
-    $this->assertAuthenticatedAs($user);
+    $response->assertOk()
+        ->assertJsonStructure(['token', 'token_type', 'user' => ['id', 'email_address']]);
+
+    expect($response->json('user.id'))->toBe($user->id);
 });
 
 test('user can login with username', function () {
@@ -27,12 +29,11 @@ test('user can login with username', function () {
         'password' => Hash::make('Password1!'),
     ]);
 
-    $this->post('/login', [
+    $this->postJson('/api/auth/login', [
         'login' => 'benadmin',
         'password' => 'Password1!',
-    ])->assertRedirect(route('dashboard'));
-
-    $this->assertAuthenticated();
+    ])->assertOk()
+        ->assertJsonPath('token_type', 'Bearer');
 });
 
 test('invalid credentials are rejected', function () {
@@ -41,17 +42,15 @@ test('invalid credentials are rejected', function () {
         'password' => Hash::make('Password1!'),
     ]);
 
-    $this->from('/login')->post('/login', [
+    $this->postJson('/api/auth/login', [
         'login' => 'anna@example.com',
         'password' => 'wrong-password',
-    ])->assertRedirect('/login')
-        ->assertSessionHasErrors('login');
-
-    $this->assertGuest();
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('login');
 });
 
 test('user can signup as admin only', function () {
-    $response = $this->post('/signup', [
+    $response = $this->postJson('/api/auth/signup', [
         'first_name' => 'Carla',
         'last_name' => 'Cruz',
         'email_address' => 'carla@example.com',
@@ -61,22 +60,31 @@ test('user can signup as admin only', function () {
         'user_type' => UserType::SuperAdmin->value,
     ]);
 
-    $response->assertRedirect(route('dashboard'));
+    $response->assertCreated()
+        ->assertJsonStructure(['token', 'user']);
 
     $user = User::query()->where('user_name', 'carla')->first();
 
     expect($user)->not->toBeNull()
         ->and($user->user_type)->toBe(UserType::Admin);
-
-    $this->assertAuthenticatedAs($user);
 });
 
 test('user can logout', function () {
     $user = User::factory()->create();
+    $token = apiTokenFor($user);
 
-    $this->actingAs($user)
-        ->post('/logout')
-        ->assertRedirect(route('login'));
+    $this->withToken($token)
+        ->postJson('/api/auth/logout')
+        ->assertOk();
 
-    $this->assertGuest();
+    expect($user->fresh()->tokens)->toBeEmpty();
+});
+
+test('authenticated user can fetch profile', function () {
+    $user = User::factory()->admin()->create();
+
+    actingAsApiUser($user)
+        ->getJson('/api/auth/user')
+        ->assertOk()
+        ->assertJsonPath('user.id', $user->id);
 });

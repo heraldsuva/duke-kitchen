@@ -3,19 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserType;
-use App\Http\Requests\User\StoreUserRequest;
-use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
-use App\Services\UserService;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function __construct(private UserService $userService) {}
-
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', User::class);
@@ -46,34 +40,5 @@ class UserController extends Controller
             ]),
             'authUserId' => $request->user()->id,
         ]);
-    }
-
-    public function store(StoreUserRequest $request): RedirectResponse
-    {
-        $this->userService->create($request->validated());
-
-        return redirect()
-            ->route('users.index')
-            ->with('success', 'User created successfully.');
-    }
-
-    public function update(UpdateUserRequest $request, User $user): RedirectResponse
-    {
-        $this->userService->update($user, $request->validated());
-
-        return redirect()
-            ->route('users.index')
-            ->with('success', 'User updated successfully.');
-    }
-
-    public function destroy(Request $request, User $user): RedirectResponse
-    {
-        $this->authorize('delete', $user);
-
-        $this->userService->delete($request->user(), $user);
-
-        return redirect()
-            ->route('users.index')
-            ->with('success', 'User deleted successfully.');
     }
 }

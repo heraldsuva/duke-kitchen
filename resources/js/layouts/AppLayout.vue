@@ -3,8 +3,9 @@ import { dashboard } from '@/routes';
 import { index as equipmentIndex } from '@/routes/equipment';
 import { index as sitesIndex } from '@/routes/sites';
 import { index as usersIndex } from '@/routes/users';
-import { logout } from '@/routes';
-import { Link, router, usePage } from '@inertiajs/vue3';
+import { login } from '@/routes';
+import { clearAuthToken } from '@/lib/auth';
+import { Link, router, useHttp, usePage } from '@inertiajs/vue3';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
@@ -16,6 +17,7 @@ const props = defineProps<{
 
 const page = usePage();
 const toast = useToast();
+const logoutForm = useHttp({});
 
 const user = computed(() => page.props.auth.user);
 const isSuperAdmin = computed(() => user.value?.is_super_admin ?? false);
@@ -72,7 +74,16 @@ onMounted(showFlash);
 watch(() => page.props.flash, showFlash, { deep: true });
 
 const submitLogout = () => {
-    router.post(logout.url());
+    logoutForm.post('/api/auth/logout', {
+        onSuccess: () => {
+            clearAuthToken();
+            router.visit(login.url());
+        },
+        onError: () => {
+            clearAuthToken();
+            router.visit(login.url());
+        },
+    });
 };
 </script>
 

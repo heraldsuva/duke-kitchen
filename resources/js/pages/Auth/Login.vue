@@ -1,19 +1,40 @@
 <script setup lang="ts">
-import { login as loginRoute, signup } from '@/routes';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { dashboard } from '@/routes';
+import { setAuthToken, hasAuthToken } from '@/lib/auth';
+import { Head, Link, router, useHttp } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import Password from 'primevue/password';
+import { signup } from '@/routes';
+import { onMounted } from 'vue';
 
-const form = useForm({
+type LoginResponse = {
+    token: string;
+    token_type: string;
+    user: {
+        id: number;
+        full_name: string;
+    };
+};
+
+const form = useHttp({
     login: '',
     password: '',
-    remember: false,
+});
+
+onMounted(() => {
+    if (hasAuthToken()) {
+        router.visit(dashboard.url());
+    }
 });
 
 const submit = () => {
-    form.post(loginRoute.url(), {
+    form.post('/api/auth/login', {
+        onSuccess: (response) => {
+            setAuthToken((response as LoginResponse).token);
+            router.visit(dashboard.url());
+        },
         onFinish: () => form.reset('password'),
     });
 };

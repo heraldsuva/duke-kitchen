@@ -10,14 +10,14 @@ test('user can create equipment with a site registration', function () {
     $user = User::factory()->admin()->create();
     $site = Site::factory()->create(['user_id' => $user->id]);
 
-    $this->actingAs($user)
-        ->post(route('equipment.store'), [
+    actingAsApiUser($user)
+        ->postJson('/api/equipment', [
             'serial_number' => 'REF-100',
             'description' => 'Refrigerator',
             'condition' => EquipmentCondition::Working->value,
             'site_id' => $site->id,
         ])
-        ->assertRedirect(route('equipment.index'));
+        ->assertCreated();
 
     $equipment = Equipment::query()->where('serial_number', 'REF-100')->first();
 
@@ -33,14 +33,14 @@ test('user can create equipment with a site registration', function () {
 test('user can create equipment without a site', function () {
     $user = User::factory()->admin()->create();
 
-    $this->actingAs($user)
-        ->post(route('equipment.store'), [
+    actingAsApiUser($user)
+        ->postJson('/api/equipment', [
             'serial_number' => 'CHL-100',
             'description' => 'Chiller',
             'condition' => EquipmentCondition::Working->value,
             'site_id' => null,
         ])
-        ->assertRedirect(route('equipment.index'));
+        ->assertCreated();
 
     $equipment = Equipment::query()->where('serial_number', 'CHL-100')->first();
 
@@ -61,14 +61,14 @@ test('user can edit equipment and change its site', function () {
         'site_id' => $siteA->id,
     ]);
 
-    $this->actingAs($user)
-        ->put(route('equipment.update', $equipment), [
+    actingAsApiUser($user)
+        ->putJson("/api/equipment/{$equipment->id}", [
             'serial_number' => $equipment->serial_number,
             'description' => $equipment->description,
             'condition' => EquipmentCondition::Working->value,
             'site_id' => $siteB->id,
         ])
-        ->assertRedirect(route('equipment.index'));
+        ->assertOk();
 
     $this->assertDatabaseHas('registered_equipment', [
         'equipment_id' => $equipment->id,
@@ -86,15 +86,14 @@ test('serial number must be unique', function () {
         'serial_number' => 'REF-001',
     ]);
 
-    $this->actingAs($user)
-        ->from(route('equipment.index'))
-        ->post(route('equipment.store'), [
+    actingAsApiUser($user)
+        ->postJson('/api/equipment', [
             'serial_number' => 'REF-001',
             'description' => 'Duplicate',
             'condition' => EquipmentCondition::Working->value,
         ])
-        ->assertRedirect(route('equipment.index'))
-        ->assertSessionHasErrors('serial_number');
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('serial_number');
 });
 
 test('deleting equipment removes its registration', function () {
@@ -107,9 +106,9 @@ test('deleting equipment removes its registration', function () {
         'site_id' => $site->id,
     ]);
 
-    $this->actingAs($user)
-        ->delete(route('equipment.destroy', $equipment))
-        ->assertRedirect(route('equipment.index'));
+    actingAsApiUser($user)
+        ->deleteJson("/api/equipment/{$equipment->id}")
+        ->assertOk();
 
     $this->assertDatabaseMissing('equipment', ['id' => $equipment->id]);
     $this->assertDatabaseMissing('registered_equipment', [
@@ -120,13 +119,12 @@ test('deleting equipment removes its registration', function () {
 test('condition must be working or not working', function () {
     $user = User::factory()->admin()->create();
 
-    $this->actingAs($user)
-        ->from(route('equipment.index'))
-        ->post(route('equipment.store'), [
+    actingAsApiUser($user)
+        ->postJson('/api/equipment', [
             'serial_number' => 'BAD-001',
             'description' => 'Broken Rule',
             'condition' => 'Broken',
         ])
-        ->assertRedirect(route('equipment.index'))
-        ->assertSessionHasErrors('condition');
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('condition');
 });

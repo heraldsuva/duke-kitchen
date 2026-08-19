@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Hash;
 test('super admin can create a user', function () {
     $superAdmin = User::factory()->superAdmin()->create();
 
-    $this->actingAs($superAdmin)
-        ->post(route('users.store'), [
+    actingAsApiUser($superAdmin)
+        ->postJson('/api/users', [
             'first_name' => 'Dana',
             'last_name' => 'Lim',
             'email_address' => 'dana@example.com',
@@ -19,7 +19,7 @@ test('super admin can create a user', function () {
             'password_confirmation' => 'Password1!',
             'user_type' => UserType::Admin->value,
         ])
-        ->assertRedirect(route('users.index'));
+        ->assertCreated();
 
     $this->assertDatabaseHas('users', [
         'user_name' => 'dana',
@@ -31,8 +31,8 @@ test('super admin can create a user', function () {
 test('super admin cannot delete their own account', function () {
     $superAdmin = User::factory()->superAdmin()->create();
 
-    $this->actingAs($superAdmin)
-        ->delete(route('users.destroy', $superAdmin))
+    actingAsApiUser($superAdmin)
+        ->deleteJson("/api/users/{$superAdmin->id}")
         ->assertForbidden();
 });
 
@@ -42,11 +42,10 @@ test('super admin cannot delete a user who owns sites or equipment', function ()
     Site::factory()->create(['user_id' => $admin->id]);
     Equipment::factory()->create(['user_id' => $admin->id]);
 
-    $this->actingAs($superAdmin)
-        ->from(route('users.index'))
-        ->delete(route('users.destroy', $admin))
-        ->assertRedirect(route('users.index'))
-        ->assertSessionHasErrors('user');
+    actingAsApiUser($superAdmin)
+        ->deleteJson("/api/users/{$admin->id}")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('user');
 });
 
 test('duplicate username and email are rejected', function () {
@@ -58,9 +57,8 @@ test('duplicate username and email are rejected', function () {
         'password' => Hash::make('Password1!'),
     ]);
 
-    $this->actingAs($superAdmin)
-        ->from(route('users.index'))
-        ->post(route('users.store'), [
+    actingAsApiUser($superAdmin)
+        ->postJson('/api/users', [
             'first_name' => 'Dup',
             'last_name' => 'User',
             'email_address' => 'taken@example.com',
@@ -69,17 +67,17 @@ test('duplicate username and email are rejected', function () {
             'password_confirmation' => 'Password1!',
             'user_type' => UserType::Admin->value,
         ])
-        ->assertRedirect(route('users.index'))
-        ->assertSessionHasErrors(['email_address', 'user_name']);
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['email_address', 'user_name']);
 });
 
 test('super admin can delete a user with no owned records', function () {
     $superAdmin = User::factory()->superAdmin()->create();
     $admin = User::factory()->admin()->create();
 
-    $this->actingAs($superAdmin)
-        ->delete(route('users.destroy', $admin))
-        ->assertRedirect(route('users.index'));
+    actingAsApiUser($superAdmin)
+        ->deleteJson("/api/users/{$admin->id}")
+        ->assertOk();
 
     $this->assertDatabaseMissing('users', ['id' => $admin->id]);
 });

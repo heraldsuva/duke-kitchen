@@ -12,16 +12,15 @@ test('equipment cannot be registered to another users site', function () {
     $other = User::factory()->admin()->create();
     $otherSite = Site::factory()->create(['user_id' => $other->id]);
 
-    $this->actingAs($admin)
-        ->from(route('equipment.index'))
-        ->post(route('equipment.store'), [
+    actingAsApiUser($admin)
+        ->postJson('/api/equipment', [
             'serial_number' => 'X-001',
             'description' => 'Blender',
             'condition' => EquipmentCondition::Working->value,
             'site_id' => $otherSite->id,
         ])
-        ->assertRedirect(route('equipment.index'))
-        ->assertSessionHasErrors('site_id');
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('site_id');
 });
 
 test('equipment cannot have multiple simultaneous site registrations', function () {
@@ -66,16 +65,15 @@ test('editing equipment to another users site is rejected', function () {
     $equipment = Equipment::factory()->create(['user_id' => $admin->id]);
     $otherSite = Site::factory()->create(['user_id' => $other->id]);
 
-    $this->actingAs($admin)
-        ->from(route('equipment.index'))
-        ->put(route('equipment.update', $equipment), [
+    actingAsApiUser($admin)
+        ->putJson("/api/equipment/{$equipment->id}", [
             'serial_number' => $equipment->serial_number,
             'description' => $equipment->description,
             'condition' => EquipmentCondition::Working->value,
             'site_id' => $otherSite->id,
         ])
-        ->assertRedirect(route('equipment.index'))
-        ->assertSessionHasErrors('site_id');
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('site_id');
 });
 
 test('unregistering equipment is done by clearing site on edit', function () {
@@ -88,14 +86,14 @@ test('unregistering equipment is done by clearing site on edit', function () {
         'site_id' => $site->id,
     ]);
 
-    $this->actingAs($user)
-        ->put(route('equipment.update', $equipment), [
+    actingAsApiUser($user)
+        ->putJson("/api/equipment/{$equipment->id}", [
             'serial_number' => $equipment->serial_number,
             'description' => $equipment->description,
             'condition' => EquipmentCondition::Working->value,
             'site_id' => null,
         ])
-        ->assertRedirect(route('equipment.index'));
+        ->assertOk();
 
     $this->assertDatabaseMissing('registered_equipment', [
         'equipment_id' => $equipment->id,

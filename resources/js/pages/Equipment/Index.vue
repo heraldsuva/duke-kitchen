@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import {
-    destroy,
-    store,
-    update,
-} from '@/actions/App/Http/Controllers/EquipmentController';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, router, useHttp } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -14,6 +9,7 @@ import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 import { computed, reactive, ref } from 'vue';
 
 type EquipmentRow = {
@@ -42,6 +38,7 @@ const props = defineProps<{
 }>();
 
 const confirm = useConfirm();
+const toast = useToast();
 const visible = ref(false);
 const editing = ref<EquipmentRow | null>(null);
 const globalFilter = ref('');
@@ -50,12 +47,14 @@ const filters = reactive({
     condition: null as string | null,
 });
 
-const form = useForm({
+const form = useHttp({
     serial_number: '',
     description: '',
     condition: 'Working',
     site_id: null as number | null,
 });
+
+const deleteForm = useHttp({});
 
 const filteredEquipment = computed(() => {
     let rows = props.equipment;
@@ -97,19 +96,26 @@ const openEdit = (item: EquipmentRow) => {
 };
 
 const submit = () => {
+    const onSuccess = () => {
+        visible.value = false;
+        toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: editing.value
+                ? 'Equipment updated successfully.'
+                : 'Equipment created successfully.',
+            life: 3500,
+        });
+        router.reload();
+    };
+
     if (editing.value) {
-        form.put(update.url(editing.value.id), {
-            preserveScroll: true,
-            onSuccess: () => {
-                visible.value = false;
-            },
+        form.put(`/api/equipment/${editing.value.id}`, {
+            onSuccess,
         });
     } else {
-        form.post(store.url(), {
-            preserveScroll: true,
-            onSuccess: () => {
-                visible.value = false;
-            },
+        form.post('/api/equipment', {
+            onSuccess,
         });
     }
 };
@@ -122,7 +128,17 @@ const confirmDelete = (item: EquipmentRow) => {
         icon: 'pi pi-exclamation-triangle',
         acceptClass: 'p-button-danger',
         accept: () => {
-            form.delete(destroy.url(item.id), { preserveScroll: true });
+            deleteForm.delete(`/api/equipment/${item.id}`, {
+                onSuccess: () => {
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: 'Equipment deleted successfully.',
+                        life: 3500,
+                    });
+                    router.reload();
+                },
+            });
         },
     });
 };

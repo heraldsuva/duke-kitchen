@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { destroy, store, update } from '@/actions/App/Http/Controllers/UserController';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, router, useHttp } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
@@ -42,7 +41,7 @@ const filters = reactive({
     user_type: null as string | null,
 });
 
-const form = useForm({
+const form = useHttp({
     first_name: '',
     last_name: '',
     email_address: '',
@@ -51,6 +50,8 @@ const form = useForm({
     password_confirmation: '',
     user_type: 'Admin',
 });
+
+const deleteForm = useHttp({});
 
 const dialogTitle = computed(() =>
     editing.value ? 'Edit User' : 'Add User',
@@ -88,19 +89,26 @@ const openEdit = (user: UserRow) => {
 };
 
 const submit = () => {
+    const onSuccess = () => {
+        visible.value = false;
+        toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: editing.value
+                ? 'User updated successfully.'
+                : 'User created successfully.',
+            life: 3500,
+        });
+        router.reload();
+    };
+
     if (editing.value) {
-        form.put(update.url(editing.value.id), {
-            preserveScroll: true,
-            onSuccess: () => {
-                visible.value = false;
-            },
+        form.put(`/api/users/${editing.value.id}`, {
+            onSuccess,
         });
     } else {
-        form.post(store.url(), {
-            preserveScroll: true,
-            onSuccess: () => {
-                visible.value = false;
-            },
+        form.post('/api/users', {
+            onSuccess,
         });
     }
 };
@@ -122,8 +130,16 @@ const confirmDelete = (user: UserRow) => {
         icon: 'pi pi-exclamation-triangle',
         acceptClass: 'p-button-danger',
         accept: () => {
-            form.delete(destroy.url(user.id), {
-                preserveScroll: true,
+            deleteForm.delete(`/api/users/${user.id}`, {
+                onSuccess: () => {
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: 'User deleted successfully.',
+                        life: 3500,
+                    });
+                    router.reload();
+                },
                 onError: (errors) => {
                     const detail =
                         errors.user ||

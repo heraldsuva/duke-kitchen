@@ -9,7 +9,7 @@ test('example page redirects guests to login', function () {
 test('authenticated users can view the dashboard', function () {
     $user = User::factory()->create();
 
-    $this->actingAs($user)
+    actingAsApiUser($user)
         ->get(route('dashboard'))
         ->assertOk();
 });

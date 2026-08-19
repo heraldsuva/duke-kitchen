@@ -8,7 +8,7 @@ Users manage **Sites**, **Equipment**, and **Equipment ↔ Site registrations**,
 
 | Layer | Technology |
 | --- | --- |
-| Backend | PHP 8.5, Laravel 13, Eloquent, Form Requests, Policies, Pest |
+| Backend | PHP 8.5, Laravel 13, Sanctum, Eloquent, Form Requests, Policies, Pest |
 | Frontend | Vue 3, Inertia.js v3, PrimeVue 4 (MIT), Tailwind CSS v4, TypeScript |
 | Database | MySQL/MariaDB (app), SQLite in-memory (tests) |
 | Tooling | Vite, Wayfinder, Laravel Pint |
@@ -104,7 +104,7 @@ EQUIPMENT 1──1 REGISTERED_EQUIPMENT   (UNIQUE equipment_id)
 ### MVC responsibilities
 
 - **Models** — relationships, casts, ownership scopes
-- **Controllers** — thin HTTP orchestration + authorization
+- **Controllers** — thin HTTP orchestration + authorization (`App\Http\Controllers` for Inertia pages, `App\Http\Controllers\Api` for JSON)
 - **Form Requests** — validation
 - **Policies** — SuperAdmin / ownership checks
 - **Services** — multi-record business operations (`SiteService`, `EquipmentService`, `UserService`)
@@ -112,9 +112,305 @@ EQUIPMENT 1──1 REGISTERED_EQUIPMENT   (UNIQUE equipment_id)
 
 ### Authentication
 
-- Login accepts **username or email**
-- Signup always creates **Admin** (never SuperAdmin)
+Authentication uses **Laravel Sanctum personal access tokens**. The Vue/Inertia UI stores the token in `localStorage` and sends it as `Authorization: Bearer {token}` on Inertia page visits and API mutations.
+
+- Login accepts **username or email** via `POST /api/auth/login`
+- Signup always creates **Admin** (never SuperAdmin) via `POST /api/auth/signup`
+- Logout revokes the current token via `POST /api/auth/logout`
+- Protected Inertia pages (`GET /dashboard`, etc.) require a valid Bearer token
 - Passwords are hashed via Laravel’s `hashed` cast
+
+## API Reference (Sanctum tokens)
+
+All JSON endpoints live under `/api`.
+
+### OpenAPI specification
+
+An OpenAPI 3.0 spec is provided as `openapi.yaml` at the project root. You can import it into tools like Swagger UI / Postman to browse endpoints and schemas.
+
+### Base URL
+
+- `http://localhost:8000/api/...` (adjust port/host as needed)
+
+### Authentication
+
+This project uses **Laravel Sanctum personal access tokens**.
+
+- Token is issued by:
+  - `POST /api/auth/login`
+  - `POST /api/auth/signup`
+- Token is sent on every protected API request:
+  - Header: `Authorization: Bearer {token}`
+- The Vue/Inertia UI stores the token in `localStorage` under `auth_token`.
+
+### Request headers
+
+- Always: `Accept: application/json`
+- For protected routes: `Authorization: Bearer {token}`
+
+### Response format
+
+List endpoints return a wrapper:
+
+```json
+{ "data": [ /* items */ ] }
+```
+
+Create/update endpoints usually return:
+
+```json
+{ "message": "....", "data": { /* entity */ } }
+```
+
+Delete endpoints usually return:
+
+```json
+{ "message": "...." }
+```
+
+### Error format
+
+Authentication / authorization:
+
+- `401 Unauthorized`: missing or invalid token
+- `403 Forbidden`: policy denied (same rules as the Inertia pages)
+
+Validation:
+
+- `422 Unprocessable Entity`: Laravel validation errors, typically shaped like:
+
+```json
+{
+  "message": "The given data was invalid.",
+  "errors": {
+    "field_name": ["Error message"]
+  }
+}
+```
+
+### Authentication
+
+#### Login
+
+`POST /api/auth/login`
+
+```json
+{
+  "login": "admin1",
+  "password": "Password1!"
+}
+```
+
+**200 OK**
+
+```json
+{
+  "token": "1|plainTextToken...",
+  "token_type": "Bearer",
+  "user": {
+    "id": 2,
+    "first_name": "Admin",
+    "last_name": "One",
+    "full_name": "Admin One",
+    "user_name": "admin1",
+    "email_address": "admin1@duke-kitchen.test",
+    "user_type": "Admin",
+    "is_super_admin": false
+  }
+}
+```
+
+**422** — invalid credentials (`errors.login`)
+
+#### Signup
+
+`POST /api/auth/signup`
+
+```json
+{
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "email_address": "jane@example.com",
+  "user_name": "jane",
+  "password": "Password1!",
+  "password_confirmation": "Password1!"
+}
+```
+
+**201 Created** — same shape as login response. `user_type` is always `Admin`.
+
+#### Current user
+
+`GET /api/auth/user` (authenticated)
+
+**200 OK** — `{ "user": { ... } }`
+
+#### Logout
+
+`POST /api/auth/logout` (authenticated)
+
+**200 OK** — `{ "message": "Logged out successfully." }`
+
+### Users (SuperAdmin only)
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/users` | List users |
+| POST | `/api/users` | Create user |
+| PUT/PATCH | `/api/users/{id}` | Update user |
+| DELETE | `/api/users/{id}` | Delete user |
+
+Create/update body:
+
+```json
+{
+  "first_name": "Dana",
+  "last_name": "Lim",
+  "email_address": "dana@example.com",
+  "user_name": "dana",
+  "password": "Password1!",
+  "password_confirmation": "Password1!",
+  "user_type": "Admin"
+}
+```
+
+Successful mutations return `{ "message": "...", "data": { ... } }`. Delete returns `{ "message": "..." }`.
+
+GET example response:
+
+```json
+{
+  "data": [
+    {
+      "id": 2,
+      "first_name": "Admin",
+      "last_name": "One",
+      "full_name": "Admin One",
+      "user_name": "admin1",
+      "email_address": "admin1@duke-kitchen.test",
+      "user_type": "Admin",
+      "sites_count": 0,
+      "equipment_count": 0
+    }
+  ]
+}
+```
+
+### Sites
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/sites` | List sites visible to the authenticated user |
+| POST | `/api/sites` | Create site |
+| PUT/PATCH | `/api/sites/{id}` | Update site |
+| DELETE | `/api/sites/{id}` | Delete site (unregisters equipment) |
+
+Create body:
+
+```json
+{
+  "description": "KFC Angeles",
+  "active": true,
+  "user_id": 2
+}
+```
+
+`user_id` is optional; SuperAdmin may assign ownership. Admins always own sites they create.
+
+Update body (owner cannot be changed here):
+
+```json
+{
+  "description": "Updated name",
+  "active": false
+}
+```
+
+GET example response:
+
+```json
+{
+  "data": [
+    {
+      "id": 5,
+      "description": "KFC Angeles",
+      "active": true,
+      "equipment_count": 3,
+      "owner": {
+        "id": 2,
+        "name": "Admin One",
+        "user_name": "admin1"
+      }
+    }
+  ]
+}
+```
+
+### Equipment
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/equipment` | List equipment visible to the authenticated user |
+| POST | `/api/equipment` | Create equipment (optional site registration) |
+| PUT/PATCH | `/api/equipment/{id}` | Update equipment and/or change site |
+| DELETE | `/api/equipment/{id}` | Delete equipment and its registration |
+
+Create/update body:
+
+```json
+{
+  "serial_number": "REF-001",
+  "description": "Walk-in refrigerator",
+  "condition": "Working",
+  "site_id": 1
+}
+```
+
+`site_id` may be `null` to leave equipment unregistered.
+
+GET example response:
+
+```json
+{
+  "data": [
+    {
+      "id": 10,
+      "serial_number": "REF-001",
+      "description": "Walk-in refrigerator",
+      "condition": "Working",
+      "site_id": 5,
+      "site": "KFC Angeles",
+      "owner": "Admin One",
+      "user_id": 2
+    }
+  ]
+}
+```
+
+### HTTP status codes
+
+| Code | Meaning |
+| --- | --- |
+| 200 | Success |
+| 201 | Created |
+| 401 | Missing or invalid token |
+| 403 | Policy denied |
+| 422 | Validation failed (`errors` object) |
+
+### Example: curl login + list sites
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"login":"admin1","password":"Password1!"}' \
+  | jq -r .token)
+
+curl -s http://localhost:8000/api/sites \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer $TOKEN" | jq
+```
+
 
 ### Authorization
 
@@ -173,6 +469,7 @@ vendor/bin/pint --dirty
 app/
   Enums/
   Http/Controllers/
+  Http/Controllers/Api/
   Http/Requests/
   Models/
   Policies/

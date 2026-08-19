@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import {
-    destroy,
-    store,
-    update,
-} from '@/actions/App/Http/Controllers/SiteController';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useHttp, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import Column from 'primevue/column';
@@ -15,6 +10,7 @@ import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import Tag from 'primevue/tag';
 import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 import { computed, reactive, ref } from 'vue';
 
 type SiteRow = {
@@ -39,6 +35,7 @@ const props = defineProps<{
 
 const page = usePage();
 const confirm = useConfirm();
+const toast = useToast();
 const visible = ref(false);
 const editing = ref<SiteRow | null>(null);
 const globalFilter = ref('');
@@ -47,11 +44,13 @@ const filters = reactive({
     active: null as boolean | null,
 });
 
-const form = useForm({
+const form = useHttp({
     description: '',
     active: true,
     user_id: page.props.auth.user?.id ?? null as number | null,
 });
+
+const deleteForm = useHttp({});
 
 const activeOptions = [
     { label: 'Active', value: true },
@@ -87,22 +86,31 @@ const openEdit = (site: SiteRow) => {
 };
 
 const submit = () => {
-    if (editing.value) {
-        form.transform((data) => ({
-            description: data.description,
-            active: data.active,
-        })).put(update.url(editing.value.id), {
-            preserveScroll: true,
-            onSuccess: () => {
-                visible.value = false;
-            },
+    const onSuccess = () => {
+        visible.value = false;
+        toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: editing.value
+                ? 'Site updated successfully.'
+                : 'Site created successfully.',
+            life: 3500,
         });
+        router.reload();
+    };
+
+    if (editing.value) {
+        form
+            .transform((data) => ({
+                description: data.description,
+                active: data.active,
+            }))
+            .put(`/api/sites/${editing.value.id}`, {
+                onSuccess,
+            });
     } else {
-        form.post(store.url(), {
-            preserveScroll: true,
-            onSuccess: () => {
-                visible.value = false;
-            },
+        form.post('/api/sites', {
+            onSuccess,
         });
     }
 };
@@ -115,7 +123,17 @@ const confirmDelete = (site: SiteRow) => {
         icon: 'pi pi-exclamation-triangle',
         acceptClass: 'p-button-danger',
         accept: () => {
-            form.delete(destroy.url(site.id), { preserveScroll: true });
+            deleteForm.delete(`/api/sites/${site.id}`, {
+                onSuccess: () => {
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: 'Site deleted. Equipment was unregistered but not deleted.',
+                        life: 3500,
+                    });
+                    router.reload();
+                },
+            });
         },
     });
 };

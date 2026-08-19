@@ -8,12 +8,12 @@ use App\Models\User;
 test('user can create a site', function () {
     $user = User::factory()->admin()->create();
 
-    $this->actingAs($user)
-        ->post(route('sites.store'), [
+    actingAsApiUser($user)
+        ->postJson('/api/sites', [
             'description' => 'KFC Angeles',
             'active' => true,
         ])
-        ->assertRedirect(route('sites.index'));
+        ->assertCreated();
 
     $this->assertDatabaseHas('sites', [
         'description' => 'KFC Angeles',
@@ -26,12 +26,12 @@ test('user can edit their site', function () {
     $user = User::factory()->admin()->create();
     $site = Site::factory()->create(['user_id' => $user->id]);
 
-    $this->actingAs($user)
-        ->put(route('sites.update', $site), [
+    actingAsApiUser($user)
+        ->putJson("/api/sites/{$site->id}", [
             'description' => 'Updated Site',
             'active' => false,
         ])
-        ->assertRedirect(route('sites.index'));
+        ->assertOk();
 
     expect($site->fresh())
         ->description->toBe('Updated Site')
@@ -48,9 +48,9 @@ test('deleting a site unregisters equipment but does not delete equipment', func
         'site_id' => $site->id,
     ]);
 
-    $this->actingAs($user)
-        ->delete(route('sites.destroy', $site))
-        ->assertRedirect(route('sites.index'));
+    actingAsApiUser($user)
+        ->deleteJson("/api/sites/{$site->id}")
+        ->assertOk();
 
     $this->assertDatabaseMissing('sites', ['id' => $site->id]);
     $this->assertDatabaseMissing('registered_equipment', [
@@ -66,9 +66,9 @@ test('user can delete a site with no equipment', function () {
     $user = User::factory()->admin()->create();
     $site = Site::factory()->create(['user_id' => $user->id]);
 
-    $this->actingAs($user)
-        ->delete(route('sites.destroy', $site))
-        ->assertRedirect(route('sites.index'));
+    actingAsApiUser($user)
+        ->deleteJson("/api/sites/{$site->id}")
+        ->assertOk();
 
     $this->assertDatabaseMissing('sites', ['id' => $site->id]);
 });
@@ -77,13 +77,13 @@ test('super admin can assign site ownership', function () {
     $superAdmin = User::factory()->superAdmin()->create();
     $admin = User::factory()->admin()->create();
 
-    $this->actingAs($superAdmin)
-        ->post(route('sites.store'), [
+    actingAsApiUser($superAdmin)
+        ->postJson('/api/sites', [
             'description' => 'Assigned Site',
             'active' => true,
             'user_id' => $admin->id,
         ])
-        ->assertRedirect(route('sites.index'));
+        ->assertCreated();
 
     $this->assertDatabaseHas('sites', [
         'description' => 'Assigned Site',
