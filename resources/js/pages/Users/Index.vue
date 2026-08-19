@@ -13,6 +13,11 @@ import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { computed, reactive, ref } from 'vue';
 
+type RoleOption = {
+    id: number;
+    name: string;
+};
+
 type UserRow = {
     id: number;
     first_name: string;
@@ -20,14 +25,13 @@ type UserRow = {
     full_name: string;
     user_name: string;
     email_address: string;
-    user_type: string;
-    sites_count: number;
-    equipment_count: number;
+    role_id: number;
+    role_name: string;
 };
 
 const props = defineProps<{
     users: UserRow[];
-    userTypes: Array<{ label: string; value: string }>;
+    roles: RoleOption[];
     authUserId: number;
 }>();
 
@@ -38,7 +42,7 @@ const editing = ref<UserRow | null>(null);
 const globalFilter = ref('');
 
 const filters = reactive({
-    user_type: null as string | null,
+    role_id: null as number | null,
 });
 
 const form = useHttp({
@@ -48,7 +52,7 @@ const form = useHttp({
     user_name: '',
     password: '',
     password_confirmation: '',
-    user_type: 'Admin',
+    role_id: null as number | null,
 });
 
 const deleteForm = useHttp({});
@@ -57,11 +61,16 @@ const dialogTitle = computed(() =>
     editing.value ? 'Edit User' : 'Add User',
 );
 
+const defaultRoleId = computed(() => {
+    const admin = props.roles.find((r) => r.name === 'Admin');
+    return admin?.id ?? props.roles[0]?.id ?? null;
+});
+
 const filteredUsers = computed(() => {
     let rows = props.users;
 
-    if (filters.user_type) {
-        rows = rows.filter((user) => user.user_type === filters.user_type);
+    if (filters.role_id) {
+        rows = rows.filter((user) => user.role_id === filters.role_id);
     }
 
     return rows;
@@ -71,7 +80,7 @@ const openCreate = () => {
     editing.value = null;
     form.reset();
     form.clearErrors();
-    form.user_type = 'Admin';
+    form.role_id = defaultRoleId.value;
     visible.value = true;
 };
 
@@ -82,7 +91,7 @@ const openEdit = (user: UserRow) => {
     form.last_name = user.last_name;
     form.email_address = user.email_address;
     form.user_name = user.user_name;
-    form.user_type = user.user_type;
+    form.role_id = user.role_id;
     form.password = '';
     form.password_confirmation = '';
     visible.value = true;
@@ -157,8 +166,8 @@ const confirmDelete = (user: UserRow) => {
     });
 };
 
-const typeSeverity = (type: string) =>
-    type === 'SuperAdmin' ? 'info' : 'secondary';
+const roleSeverity = (name: string) =>
+    name === 'SuperAdmin' ? 'info' : 'secondary';
 </script>
 
 <template>
@@ -181,11 +190,11 @@ const typeSeverity = (type: string) =>
                 class="w-full sm:max-w-sm"
             />
             <Select
-                v-model="filters.user_type"
-                :options="userTypes"
-                option-label="label"
-                option-value="value"
-                placeholder="Filter by user type"
+                v-model="filters.role_id"
+                :options="props.roles"
+                option-label="name"
+                option-value="id"
+                placeholder="Filter by role"
                 show-clear
                 class="w-full sm:max-w-xs"
             />
@@ -201,7 +210,7 @@ const typeSeverity = (type: string) =>
                 'full_name',
                 'user_name',
                 'email_address',
-                'user_type',
+                'role_name',
             ]"
             :global-filter="globalFilter"
             sort-mode="multiple"
@@ -211,16 +220,14 @@ const typeSeverity = (type: string) =>
             <Column field="full_name" header="Name" sortable />
             <Column field="user_name" header="Username" sortable />
             <Column field="email_address" header="Email" sortable />
-            <Column field="user_type" header="User Type" sortable>
+            <Column field="role_name" header="Role" sortable>
                 <template #body="{ data }">
                     <Tag
-                        :value="data.user_type"
-                        :severity="typeSeverity(data.user_type)"
+                        :value="data.role_name"
+                        :severity="roleSeverity(data.role_name)"
                     />
                 </template>
             </Column>
-            <Column field="sites_count" header="Sites" sortable />
-            <Column field="equipment_count" header="Equipment" sortable />
             <Column header="Actions">
                 <template #body="{ data }">
                     <div class="flex gap-2">
@@ -295,16 +302,16 @@ const typeSeverity = (type: string) =>
                     }}</small>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-sm font-medium">User Type</label>
+                    <label class="text-sm font-medium">Role</label>
                     <Select
-                        v-model="form.user_type"
-                        :options="userTypes"
-                        option-label="label"
-                        option-value="value"
+                        v-model="form.role_id"
+                        :options="props.roles"
+                        option-label="name"
+                        option-value="id"
                         class="w-full"
                     />
                     <small class="text-red-600">{{
-                        form.errors.user_type
+                        form.errors.role_id
                     }}</small>
                 </div>
                 <div class="space-y-2">

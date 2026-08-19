@@ -20,6 +20,7 @@ class UserController extends Controller
 
         $users = User::query()
             ->withCount(['sites', 'equipment'])
+            ->with('role:id,name')
             ->orderBy('id', 'desc')
             ->orderBy('first_name')
             ->orderBy('last_name')
@@ -34,6 +35,7 @@ class UserController extends Controller
     public function store(StoreUserRequest $request): JsonResponse
     {
         $user = $this->userService->create($request->validated());
+        $user->load('role:id,name');
 
         return response()->json([
             'message' => 'User created successfully.',
@@ -44,6 +46,7 @@ class UserController extends Controller
     public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
         $user = $this->userService->update($user, $request->validated());
+        $user->load('role:id,name');
 
         return response()->json([
             'message' => 'User updated successfully.',
@@ -74,7 +77,8 @@ class UserController extends Controller
             'full_name' => $user->full_name,
             'user_name' => $user->user_name,
             'email_address' => $user->email_address,
-            'user_type' => $user->user_type->value,
+            'role_id' => $user->role_id,
+            'role_name' => $user->role?->name,
             'sites_count' => $user->sites_count ?? 0,
             'equipment_count' => $user->equipment_count ?? 0,
         ];

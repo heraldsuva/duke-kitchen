@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\UserType;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,7 +15,7 @@ class UserController extends Controller
         $this->authorize('viewAny', User::class);
 
         $users = User::query()
-            ->withCount(['sites', 'equipment'])
+            ->with('role:id,name')
             ->orderBy('id', 'desc')
             ->orderBy('first_name')
             ->orderBy('last_name')
@@ -27,17 +27,13 @@ class UserController extends Controller
                 'full_name' => $user->full_name,
                 'user_name' => $user->user_name,
                 'email_address' => $user->email_address,
-                'user_type' => $user->user_type->value,
-                'sites_count' => $user->sites_count,
-                'equipment_count' => $user->equipment_count,
+                'role_id' => $user->role_id,
+                'role_name' => $user->role?->name,
             ]);
 
         return Inertia::render('Users/Index', [
             'users' => $users,
-            'userTypes' => collect(UserType::cases())->map(fn (UserType $type) => [
-                'label' => $type->label(),
-                'value' => $type->value,
-            ]),
+            'roles' => Role::query()->orderBy('name')->get(['id', 'name']),
             'authUserId' => $request->user()->id,
         ]);
     }

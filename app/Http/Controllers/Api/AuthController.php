@@ -6,6 +6,7 @@ use App\Enums\UserType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\SignupRequest;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class AuthController extends Controller
         $password = $request->string('password')->toString();
 
         $user = User::query()
+            ->with('role:id,name')
             ->where(function ($query) use ($login): void {
                 $query->where('email_address', $login)
                     ->orWhere('user_name', $login);
@@ -43,6 +45,10 @@ class AuthController extends Controller
 
     public function signup(SignupRequest $request): JsonResponse
     {
+        $adminRoleId = Role::query()
+            ->firstOrCreate(['name' => UserType::Admin->value])
+            ->id;
+
         $user = User::query()->create([
             ...$request->safe()->only([
                 'first_name',
@@ -51,8 +57,10 @@ class AuthController extends Controller
                 'user_name',
                 'password',
             ]),
-            'user_type' => UserType::Admin,
+            'role_id' => $adminRoleId,
         ]);
+
+        $user->load('role:id,name');
 
         $token = $user->createToken('auth')->plainTextToken;
 
@@ -78,8 +86,11 @@ class AuthController extends Controller
 
     public function user(Request $request): JsonResponse
     {
+        $user = $request->user();
+        $user->load('role:id,name');
+
         return response()->json([
-            'user' => $this->formatUser($request->user()),
+            'user' => $this->formatUser($user),
         ]);
     }
 
@@ -95,7 +106,8 @@ class AuthController extends Controller
             'full_name' => $user->full_name,
             'user_name' => $user->user_name,
             'email_address' => $user->email_address,
-            'user_type' => $user->user_type->value,
+            'role_id' => $user->role_id,
+            'role_name' => $user->role?->name,
             'is_super_admin' => $user->isSuperAdmin(),
         ];
     }

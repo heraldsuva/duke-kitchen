@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\SignupController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EquipmentController;
+use App\Http\Controllers\RolesController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteEquipmentController;
 use App\Http\Controllers\UserController;
@@ -63,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/roles', [RolesController::class, 'index'])->name('roles.index');
     Route::get('/sites', [SiteController::class, 'index'])->name('sites.index');
     Route::get('/sites/{site}/equipment', SiteEquipmentController::class)->name('sites.equipment');
     Route::get('/equipment', [EquipmentController::class, 'index'])->name('equipment.index');

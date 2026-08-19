@@ -214,7 +214,8 @@ Validation:
     "full_name": "Admin One",
     "user_name": "admin1",
     "email_address": "admin1@duke-kitchen.test",
-    "user_type": "Admin",
+    "role_id": 1,
+    "role_name": "Admin",
     "is_super_admin": false
   }
 }
@@ -237,7 +238,7 @@ Validation:
 }
 ```
 
-**201 Created** — same shape as login response. `user_type` is always `Admin`.
+**201 Created** — same shape as login response. Role is always `Admin`.
 
 #### Current user
 
@@ -270,7 +271,7 @@ Create/update body:
   "user_name": "dana",
   "password": "Password1!",
   "password_confirmation": "Password1!",
-  "user_type": "Admin"
+  "role_id": 1
 }
 ```
 
@@ -288,7 +289,8 @@ GET example response:
       "full_name": "Admin One",
       "user_name": "admin1",
       "email_address": "admin1@duke-kitchen.test",
-      "user_type": "Admin",
+      "role_id": 1,
+      "role_name": "Admin",
       "sites_count": 0,
       "equipment_count": 0
     }
@@ -424,7 +426,7 @@ Navigation hides Users for Admins, but Policies enforce the same rules on the ba
 
 ## Business Rules / Design Decisions
 
-1. **`users` table naming** — Laravel convention (`users`) is used instead of literal `user`. Business columns are preserved: `user_type`, `first_name`, `last_name`, `email_address`, `user_name`, `password`.
+1. **`users` table naming** — Laravel convention (`users`) is used instead of literal `user`. Business columns are preserved: `role_id` (FK to `roles`), `first_name`, `last_name`, `email_address`, `user_name`, `password`.
 
 2. **`registered_equipment` is required** — Site assignment lives in this association table, not an `equipment.site_id` column.
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserType;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
@@ -57,16 +58,16 @@ test('user can signup as admin only', function () {
         'user_name' => 'carla',
         'password' => 'Password1!',
         'password_confirmation' => 'Password1!',
-        'user_type' => UserType::SuperAdmin->value,
     ]);
 
     $response->assertCreated()
         ->assertJsonStructure(['token', 'user']);
 
     $user = User::query()->where('user_name', 'carla')->first();
+    $adminRole = Role::query()->where('name', UserType::Admin->value)->first();
 
     expect($user)->not->toBeNull()
-        ->and($user->user_type)->toBe(UserType::Admin);
+        ->and($user->role_id)->toBe($adminRole->id);
 });
 
 test('user can logout', function () {

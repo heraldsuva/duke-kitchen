@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EquipmentController;
+use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SiteController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +18,7 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->name('api.')->group(function () {
+    Route::apiResource('roles', RoleController::class)->except(['show']);
     Route::apiResource('users', UserController::class)->except(['show']);
     Route::apiResource('sites', SiteController::class)->except(['show']);
     Route::apiResource('equipment', EquipmentController::class)->except(['show']);

@@ -5,7 +5,8 @@ export type User = {
     full_name: string;
     user_name: string;
     email_address: string;
-    user_type: 'SuperAdmin' | 'Admin';
+    role_id: number;
+    role_name: string;
     is_super_admin: boolean;
 };
 

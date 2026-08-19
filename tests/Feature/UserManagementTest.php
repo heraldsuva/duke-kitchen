@@ -2,12 +2,14 @@
 
 use App\Enums\UserType;
 use App\Models\Equipment;
+use App\Models\Role;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 test('super admin can create a user', function () {
     $superAdmin = User::factory()->superAdmin()->create();
+    $adminRole = Role::query()->firstOrCreate(['name' => UserType::Admin->value]);
 
     actingAsApiUser($superAdmin)
         ->postJson('/api/users', [
@@ -17,14 +19,14 @@ test('super admin can create a user', function () {
             'user_name' => 'dana',
             'password' => 'Password1!',
             'password_confirmation' => 'Password1!',
-            'user_type' => UserType::Admin->value,
+            'role_id' => $adminRole->id,
         ])
         ->assertCreated();
 
     $this->assertDatabaseHas('users', [
         'user_name' => 'dana',
         'email_address' => 'dana@example.com',
-        'user_type' => UserType::Admin->value,
+        'role_id' => $adminRole->id,
     ]);
 });
 
@@ -50,6 +52,7 @@ test('super admin cannot delete a user who owns sites or equipment', function ()
 
 test('duplicate username and email are rejected', function () {
     $superAdmin = User::factory()->superAdmin()->create();
+    $adminRole = Role::query()->firstOrCreate(['name' => UserType::Admin->value]);
 
     User::factory()->create([
         'email_address' => 'taken@example.com',
@@ -65,7 +68,7 @@ test('duplicate username and email are rejected', function () {
             'user_name' => 'taken',
             'password' => 'Password1!',
             'password_confirmation' => 'Password1!',
-            'user_type' => UserType::Admin->value,
+            'role_id' => $adminRole->id,
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['email_address', 'user_name']);

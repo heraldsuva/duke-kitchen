@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\User;
 
-use App\Enums\UserType;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -43,7 +42,7 @@ class UpdateUserRequest extends FormRequest
                 Rule::unique('users', 'user_name')->ignore($user->id),
             ],
             'password' => ['nullable', 'confirmed', Password::defaults()],
-            'user_type' => ['required', Rule::enum(UserType::class)],
+            'role_id' => ['required', Rule::exists('roles', 'id')],
         ];
     }
 }

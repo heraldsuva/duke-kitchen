@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -15,7 +16,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 /**
  * @property int $id
- * @property UserType $user_type
+ * @property int $role_id
  * @property string $first_name
  * @property string $last_name
  * @property string $email_address
@@ -25,9 +26,10 @@ use Laravel\Sanctum\HasApiTokens;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read string $full_name
+ * @property-read Role $role
  */
 #[Fillable([
-    'user_type',
+    'role_id',
     'first_name',
     'last_name',
     'email_address',
@@ -46,7 +48,6 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'user_type' => UserType::class,
             'password' => 'hashed',
         ];
     }
@@ -63,12 +64,17 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return $this->user_type === UserType::SuperAdmin;
+        return $this->role?->name === UserType::SuperAdmin->value;
     }
 
     public function isAdmin(): bool
     {
-        return $this->user_type === UserType::Admin;
+        return $this->role?->name === UserType::Admin->value;
+    }
+
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
     }
 
     public function sites(): HasMany

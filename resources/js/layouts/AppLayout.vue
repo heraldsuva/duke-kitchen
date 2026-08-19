@@ -28,6 +28,9 @@ const navItems = computed(() => {
         ...(isSuperAdmin.value
             ? [{ label: 'Users', href: usersIndex.url(), icon: 'pi pi-users' }]
             : []),
+        ...(isSuperAdmin.value
+            ? [{ label: 'Roles', href: '/roles', icon: 'pi pi-shield' }]
+            : []),
         { label: 'Sites', href: sitesIndex.url(), icon: 'pi pi-building' },
         {
             label: 'Equipment',
@@ -105,7 +108,7 @@ const submitLogout = () => {
                 </div>
                 <div class="hidden text-right text-sm sm:block">
                     <p class="font-medium">{{ user?.full_name }}</p>
-                    <p class="text-brand-100">{{ user?.user_type }}</p>
+                    <p class="text-brand-100">{{ user?.role_name }}</p>
                 </div>
             </div>
         </header>

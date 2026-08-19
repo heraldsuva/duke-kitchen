@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Equipment;
+use App\Models\Role;
 use App\Models\Site;
 use App\Models\User;
 
@@ -18,6 +19,56 @@ test('super admin can access user maintenance', function () {
     actingAsApiUser($superAdmin)
         ->get(route('users.index'))
         ->assertOk();
+});
+
+test('admin cannot access role maintenance', function () {
+    $admin = User::factory()->admin()->create();
+
+    actingAsApiUser($admin)
+        ->get(route('roles.index'))
+        ->assertForbidden();
+});
+
+test('super admin can access role maintenance', function () {
+    $superAdmin = User::factory()->superAdmin()->create();
+
+    actingAsApiUser($superAdmin)
+        ->get(route('roles.index'))
+        ->assertOk();
+});
+
+test('admin cannot update another users role', function () {
+    $admin = User::factory()->admin()->create();
+    $other = User::factory()->admin()->create();
+    $superAdminRole = Role::query()->firstOrCreate(['name' => 'SuperAdmin']);
+
+    actingAsApiUser($admin)
+        ->putJson("/api/users/{$other->id}", [
+            'first_name' => $other->first_name,
+            'last_name' => $other->last_name,
+            'email_address' => $other->email_address,
+            'user_name' => "role_user_{$other->id}",
+            'role_id' => $superAdminRole->id,
+        ])
+        ->assertForbidden();
+});
+
+test('super admin can update another users role', function () {
+    $superAdmin = User::factory()->superAdmin()->create();
+    $other = User::factory()->admin()->create();
+    $superAdminRole = Role::query()->firstOrCreate(['name' => 'SuperAdmin']);
+
+    actingAsApiUser($superAdmin)
+        ->putJson("/api/users/{$other->id}", [
+            'first_name' => $other->first_name,
+            'last_name' => $other->last_name,
+            'email_address' => $other->email_address,
+            'user_name' => "role_user_{$other->id}",
+            'role_id' => $superAdminRole->id,
+        ])
+        ->assertOk();
+
+    expect($other->fresh()->role_id)->toBe($superAdminRole->id);
 });
 
 test('admin cannot access another users site', function () {

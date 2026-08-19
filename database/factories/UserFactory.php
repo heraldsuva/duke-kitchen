@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\UserType;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -15,13 +16,20 @@ class UserFactory extends Factory
 {
     protected static ?string $password;
 
+    private function roleId(UserType $type): int
+    {
+        return Role::query()
+            ->firstOrCreate(['name' => $type->value])
+            ->id;
+    }
+
     /**
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
-            'user_type' => UserType::Admin,
+            'role_id' => $this->roleId(UserType::Admin),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'email_address' => fake()->unique()->safeEmail(),
@@ -34,14 +42,14 @@ class UserFactory extends Factory
     public function superAdmin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'user_type' => UserType::SuperAdmin,
+            'role_id' => $this->roleId(UserType::SuperAdmin),
         ]);
     }
 
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'user_type' => UserType::Admin,
+            'role_id' => $this->roleId(UserType::Admin),
         ]);
     }
 }
